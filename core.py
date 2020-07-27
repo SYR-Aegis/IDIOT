@@ -1,7 +1,20 @@
 import asyncio
 from random import random
 
-async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+TOPICS = list()
+
+async def node_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    print("node handler called")
+
+    data = await reader.read(1024)
+
+    if not data:
+        print("node name corrupted")
+        return
+
+    print("name: ", data.decode("utf-8"))
+
+async def topic_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     print("handler called")
 
     data = await reader.read(1024)
@@ -29,21 +42,29 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
 
     while True:
         data = await reader.read(1024)
+
+        if not data:
+            break
+
         msg = data.decode("utf-8")
         print(msg)
 
 def main():
     
     loop = asyncio.get_event_loop()
-    coro = asyncio.start_server(handler, host="127.0.0.1", port=5001, loop=loop)
-    server = loop.run_until_complete(coro)
+    node = asyncio.start_server(node_handler, host="127.0.0.1", port=5000, loop=loop)
+    topic = asyncio.start_server(topic_handler, host="127.0.0.1", port=5001, loop=loop)
+    topic_server = loop.run_until_complete(topic)
+    node_server = loop.run_until_complete(node)
 
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        server.close()
-        print("closing")
-        loop.run_until_complete(server.wait_closed())
+        print("Closing")
+        node_server.close()
+        topic_server.close()
+        loop.run_until_complete(node_server.wait_closed())
+        loop.run_until_complete(topic_server.wait_closed())
         loop.close()
 
 if __name__ == "__main__":
