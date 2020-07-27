@@ -1,6 +1,15 @@
 import asyncio
+import time
 
 async def run_client(host: str, port: int):
+
+    node_reader, node_writer = await asyncio.open_connection(host=host, port=5000)
+    node_writer.write("test".encode("utf-8"))
+
+    await node_writer.drain()
+
+    print("node name published")
+    node_writer.close()
 
     reader, writer = await asyncio.open_connection(host=host, port=port)
 
@@ -23,16 +32,14 @@ async def run_client(host: str, port: int):
     response_str = response.decode("utf-8")
 
     while True:
-        try:
-            if response_str == "0":
-                print("connection failed")
-            elif response_str == "1":
-                print("connceted")
-                writer.write("hello".encode("utf-8"))
-            else:
-                print("debug it man!")
-        except KeyboardInterrupt:
-            break
+        if response_str == "0":
+            print("connection failed")
+        elif response_str == "1":
+            print("connceted")
+            writer.write("hello".encode("utf-8"))
+            time.sleep(1)
+        else:
+            print("debug it man!")
 
     print("closing connection ...")
     writer.close()
